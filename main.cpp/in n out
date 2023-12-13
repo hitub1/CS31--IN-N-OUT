@@ -1,0 +1,213 @@
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <vector>
+#include <set>
+
+using namespace std;
+
+const double combo1Cost = 9.45;
+const double combo2Cost = 7.95;
+const double combo3Cost = 7.55;
+const double shakeCost = 2.85;
+const int maxItems = 50;
+std::set<std::string> itemTypes = {"1", "2", "3", "C", "V", "S"};
+
+// split a string into tokens separated by a sep character
+std::vector<std::string> splitString(const std::string &str, char sep)
+{
+  std::stringstream ss(str);
+  std::string token;
+  std::vector<std::string> tokens;
+  while (std::getline(ss, token, sep))
+    tokens.push_back(token);
+  return tokens;
+}
+
+// convert a string into a positive integer, returns -1 in case the string is not a valid positive integer representation
+int toInt(const std::string &str)
+{
+  if (str.empty())
+    return -1;
+  for (char c : str)
+  {
+    if (!isdigit(c))
+      return -1;
+  }
+  std::stringstream ss(str);
+  int x;
+  return ((ss >> x) && (ss.eof()) ? x : -1);
+}
+
+// check if a string is a valid orders
+bool isValidOrderString(string orders)
+{
+  vector<string> tokens = splitString(orders, '_');
+  if (tokens.empty())
+    return false;
+
+  int totalItems = 0;
+
+  for (string &token : tokens)
+    if (token.empty())
+      return false;
+    else
+    {
+      vector<string> parts = splitString(token, ':');
+      if (parts.size() != 2)
+        return false;
+      // left_part:right_part
+      // left_part must be a postive integer
+      int cnt = toInt(parts[0]);
+      if (cnt <= 0 || !itemTypes.count(parts[1]))
+        return false;
+      //
+      totalItems += cnt;
+    }
+
+  if (totalItems > 50)
+    return false;
+
+  return true;
+}
+
+// get price of an ordered item
+double getPrice(int cnt, string type)
+{
+  if (type == "1")
+    return combo1Cost * cnt;
+  if (type == "2")
+    return combo2Cost * cnt;
+  if (type == "3")
+    return combo3Cost * cnt;
+  //
+  return shakeCost * cnt;
+}
+
+// get total cost of the order
+double cost(string orders)
+{
+  if (!isValidOrderString(orders))
+    return -1.0;
+
+  double totalPrice = 0;
+  vector<string> tokens = splitString(orders, '_');
+  for (string &token : tokens)
+  {
+    vector<string> parts = splitString(token, ':');
+    // left_part:right_part
+    int cnt = toInt(parts[0]);
+    totalPrice += getPrice(cnt, parts[1]);
+  }
+
+  return totalPrice;
+}
+
+// count number of a specific combo in an order
+int howManyCombos(string orders, int whichCombo)
+{
+  if (whichCombo < 1 || whichCombo > 3 || !isValidOrderString(orders))
+    return -1;
+
+  int countCombos = 0;
+  vector<string> tokens = splitString(orders, '_');
+  for (string &token : tokens)
+  {
+    vector<string> parts = splitString(token, ':');
+    // left_part:right_part
+    int cnt = toInt(parts[0]);
+    if (parts[1] == to_string(whichCombo))
+      countCombos += cnt;
+  }
+
+  return countCombos;
+}
+
+// count number of a specific shake in an order
+int howManyShakes(string orders, string whichShake)
+{
+  if (whichShake != "Chocolate" && whichShake != "Vanilla" && whichShake != "Strawberry")
+    return -1;
+  if (!isValidOrderString(orders))
+    return -1;
+  //
+  int countShakes = 0;
+  vector<string> tokens = splitString(orders, '_');
+  for (string &token : tokens)
+  {
+    vector<string> parts = splitString(token, ':');
+    // left_part:right_part
+    int cnt = toInt(parts[0]);
+    if (parts[1] == whichShake.substr(0, 1))
+      countShakes += cnt;
+  }
+
+  return countShakes;
+}
+
+int main()
+{
+  // string s;
+  // cout.setf(ios::boolalpha); // prints bool values as "true" or "false"
+  // while (true)
+  // {
+  //   cout << "Enter a possible order string: ";
+  //   getline(cin, s);
+  //   if (s == "quit")
+  //     break;
+  //   cout << "isValidOrderString returns ";
+  //   cout << isValidOrderString(s) << endl;
+  //   cout << "cost(s) returns ";
+  //   cout << cost(s) << endl;
+  //   cout << "howManyCombos(s, 1) returns ";
+  //   cout << howManyShakes(s, 1) << endl;
+  //   cout << "howManyShakes(s, 'Chocolate' ) returns ";
+  //   cout << howManyShakes(s, "Chocolate") << endl;
+  // }
+  assert(isValidOrderString("") == false);
+  assert(isValidOrderString("    ") == false);
+
+  vector<string> validOrders = {
+      "4:1", "2:1_2:1",
+      "2:2_2:1",
+      "2:1_1:C"};
+
+  for (string &x : validOrders)
+    assert(isValidOrderString(x));
+
+  vector<string> invalidOrders = {
+      "4:5",
+      "+4:1",
+      "1:1_2:2_0:3",
+      "1:1_-12:2",
+      "500:1_500:2",
+      "40:1_10:1_1:1",
+      "40:1_10:2_1:3",
+      "1:1_2"};
+  for (string &x : invalidOrders)
+    assert(!isValidOrderString(x));
+  assert(std::to_string(cost("4:1")) == "37.800000");
+  assert(std::to_string(cost("2:1_2:1")) == "37.800000");
+  assert(std::to_string(cost("2:2_2:1")) == "34.800000");
+
+  assert(howManyCombos("", 1) == -1);
+  assert(howManyCombos("      ", 2) == -1);
+  assert(howManyCombos("DpMqDqMqDqPA3", 3) == -1);
+  assert(howManyCombos("40:1_10:1_1:1", 1) == -1);
+  assert(howManyCombos("2:1_27:1", 1) == 29);
+  assert(howManyCombos("3:3_27:1_5:C_10:3", 3) == 13);
+
+  assert(howManyShakes("", "Chocolate") == -1);
+  assert(howManyShakes("      ", "Chocolate") == -1);
+  assert(howManyShakes("DpMqDqMqDqPA3", "Meoz") == -1);
+  assert(howManyShakes("40:1_10:1", "Meoz") == -1);
+  assert(howManyShakes("2:S_27:S", "Strawberry") == 29);
+  assert(howManyShakes("3:C_27:1_5:C_10:3", "Chocolate") == 8);
+
+  // don't use assert on doubles directly...
+  assert(std::to_string(cost("1:1")) == "9.450000");
+  assert(std::to_string(cost("1:2")) == "7.950000");
+
+  cerr << "All tests succeeded" << endl;
+  return (0);
+}
